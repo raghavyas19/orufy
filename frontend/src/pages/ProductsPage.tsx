@@ -57,6 +57,8 @@ const emptyForm: ProductForm = {
   exchangeEligibility: "Yes",
 };
 
+const PRODUCT_DRAFT_KEY = "orufy-product-draft";
+
 const gradients = [
   { bg: "from-amber-100 to-amber-200", emoji: "🍫" },
   { bg: "from-pink-100 to-rose-200", emoji: "🍰" },
@@ -475,8 +477,36 @@ function ProductModal({
   const productTypeRef = useRef<HTMLDivElement>(null);
   const exchangeRef = useRef<HTMLDivElement>(null);
 
+  const clearDraft = () => {
+    window.localStorage.removeItem(PRODUCT_DRAFT_KEY);
+  };
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   useEffect(() => {
     if (!initialProduct) {
+      if (mode === "add") {
+        const savedDraft = window.localStorage.getItem(PRODUCT_DRAFT_KEY);
+        if (savedDraft) {
+          try {
+            const parsedDraft = JSON.parse(savedDraft) as { form?: Partial<ProductForm> };
+            setForm({ ...emptyForm, ...parsedDraft.form });
+            setImageItems([]);
+            setShowNameError(false);
+            return;
+          } catch {
+            clearDraft();
+          }
+        }
+      }
+
       setForm(emptyForm);
       setImageItems([]);
       return;
@@ -500,6 +530,17 @@ function ProductModal({
     );
     setShowNameError(false);
   }, [initialProduct]);
+
+  useEffect(() => {
+    if (mode !== "add" || initialProduct) return;
+
+    window.localStorage.setItem(
+      PRODUCT_DRAFT_KEY,
+      JSON.stringify({
+        form,
+      }),
+    );
+  }, [form, initialProduct, mode]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -563,6 +604,7 @@ function ProductModal({
       const files = imageItems.filter((item) => item.kind === "new" && item.file).map((item) => item.file as File);
 
       await onSubmit(form, files, retainedImages);
+      if (mode === "add") clearDraft();
     } finally {
       setSubmitting(false);
     }

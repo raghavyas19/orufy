@@ -35,7 +35,7 @@ async function buildImages(files, bodyImages, fallbackImages = []) {
 }
 
 export const listProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find().populate('category')
+  const products = await Product.find().sort({ createdAt: -1 }).populate('category')
   res.json({ success: true, data: products })
 })
 
