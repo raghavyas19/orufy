@@ -1,0 +1,145 @@
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { ChevronDown, Home, ShoppingBag, Search, LogOut } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import Logo from "@/components/Logo";
+import { useAuth } from "@/context/auth";
+
+export type HeaderContext = {
+  setHeaderSearchVisible: (visible: boolean) => void;
+  headerSearchValue: string;
+  setHeaderSearchValue: (value: string) => void;
+};
+
+const nav = [
+  { to: "/", label: "Home", icon: Home },
+  { to: "/products", label: "Products", icon: ShoppingBag },
+] as const;
+
+export default function AppLayout() {
+  const location = useLocation();
+  const pathname = location.pathname;
+  const [headerSearchVisible, setHeaderSearchVisible] = useState(false);
+  const [headerSearchValue, setHeaderSearchValue] = useState("");
+  const { user } = useAuth();
+
+  return (
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar */}
+      <aside className="w-[220px] shrink-0 bg-sidebar text-sidebar-foreground flex flex-col">
+        <div className="px-5 py-5">
+          <Logo light />
+        </div>
+        <div className="px-3 pb-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-sidebar-foreground/50" />
+            <input
+              placeholder="Search"
+              className="w-full h-8 pl-8 pr-3 rounded-md bg-[#2F343D] text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:outline-none"
+            />
+          </div>
+        </div>
+        <nav className="px-2 flex-1 space-y-0.5">
+          {nav.map((item) => {
+            const active = pathname === item.to;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition ${
+                  active ? "text-white font-semibold" : "text-[#98A2B3] hover:text-white"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-14 flex items-center justify-between px-6 border-b border-border">
+          <div className="text-sm font-semibold text-foreground capitalize">
+            {pathname === "/products" ? (
+              <div className="flex items-center gap-2 text-[#344054]">
+                <ShoppingBag className="h-4 w-4" />
+                <span className="font-semibold">Products</span>
+              </div>
+            ) : pathname === "/" ? null : (
+              pathname.replace("/", "")
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {headerSearchVisible && (
+              <div className="relative w-[280px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  placeholder="Search Services, Products"
+                  value={headerSearchValue}
+                  onChange={(event) => setHeaderSearchValue(event.target.value)}
+                  className="w-full h-8 pl-9 pr-3 rounded-md bg-[#F3F4F6] text-xs placeholder:text-muted-foreground focus:outline-none"
+                />
+              </div>
+            )}
+            <ProfileMenu userEmail={user?.email || "user@example.com"} />
+          </div>
+        </header>
+        <main className="flex-1 bg-background">
+          <Outlet context={{ setHeaderSearchVisible, headerSearchValue, setHeaderSearchValue }} />
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function ProfileMenu({ userEmail }: { userEmail: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div className="relative flex items-center" ref={ref}>
+      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-sm font-semibold">
+        P
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition"
+        aria-label="Open profile menu"
+      >
+        <ChevronDown className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg border border-border shadow-lg z-50">
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-sm font-semibold">Profile</p>
+            <p className="text-xs text-muted-foreground">{userEmail}</p>
+          </div>
+          <button
+            onClick={() => {
+              setOpen(false);
+              logout();
+              navigate("/login");
+            }}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-muted flex items-center gap-2 text-destructive"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
