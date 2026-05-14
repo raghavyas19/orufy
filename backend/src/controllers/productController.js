@@ -1,6 +1,6 @@
 import asyncHandler from 'express-async-handler'
 import Product from '../models/Product.js'
-import { uploadBuffer } from '../utils/imageUpload.js'
+import { uploadBuffer, normalizeImagesPayload } from '../utils/imageUpload.js'
 
 async function buildImages(files, bodyImages, fallbackImages = []) {
   const images = []
@@ -9,13 +9,7 @@ async function buildImages(files, bodyImages, fallbackImages = []) {
     try {
       const parsedImages = JSON.parse(bodyImages)
       if (Array.isArray(parsedImages)) {
-        for (const item of parsedImages) {
-          if (typeof item === 'string') {
-            images.push({ url: item, provider: 'local' })
-          } else if (item?.url) {
-            images.push(item)
-          }
-        }
+        images.push(...normalizeImagesPayload(parsedImages))
       }
     } catch (error) {
       throw new Error('Invalid images payload')

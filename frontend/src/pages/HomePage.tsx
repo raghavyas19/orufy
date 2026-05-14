@@ -10,6 +10,8 @@ type ProductImage = {
   provider?: "cloudinary" | "local";
 };
 
+type ProductImagePayload = ProductImage | string | Record<string, unknown>;
+
 type ProductRecord = {
   _id: string;
   name: string;
@@ -20,7 +22,7 @@ type ProductRecord = {
   price?: number;
   exchangeEligibility?: boolean;
   published?: boolean;
-  images?: ProductImage[];
+  images?: ProductImagePayload[];
 };
 
 type ProductForm = {
@@ -33,7 +35,8 @@ type ProductForm = {
   exchangeEligibility: "Yes" | "No";
 };
 
-type ProductCard = ProductRecord & {
+type ProductCard = Omit<ProductRecord, "images"> & {
+  images?: ProductImage[];
   emoji: string;
   bg: string;
 };
@@ -71,10 +74,57 @@ function normalizeProduct(product: ProductRecord, index: number): ProductCard {
   const visual = gradients[index % gradients.length];
   const apiBaseUrl = getApiBaseUrl();
 
-  const normalizedImages = product.images?.map((img) => ({
-    ...img,
-    url: img.url.startsWith("/") ? `${apiBaseUrl}${img.url}` : img.url,
-  }));
+  const normalizeImageUrl = (value: ProductImagePayload) => {
+    const imageRecord = typeof value === "string" ? null : (value as Record<string, unknown>);
+    const rawUrl =
+      typeof value === "string"
+        ? value
+        : typeof imageRecord?.url === "string"
+          ? imageRecord.url
+          : typeof imageRecord?.secure_url === "string"
+            ? imageRecord.secure_url
+            : typeof imageRecord?.imageUrl === "string"
+              ? imageRecord.imageUrl
+              : typeof imageRecord?.src === "string"
+                ? imageRecord.src
+                : typeof imageRecord?.path === "string"
+                  ? imageRecord.path
+                  : "";
+
+    if (!rawUrl) return "";
+    if (/^(https?:|data:|blob:)/i.test(rawUrl)) return rawUrl;
+    if (rawUrl.startsWith("/")) return `${apiBaseUrl}${rawUrl}`;
+    return `${apiBaseUrl}/${rawUrl.replace(/^\/+/, "")}`;
+  };
+
+  const normalizedImages = product.images?.map((img) => {
+    const url = normalizeImageUrl(img);
+
+    if (typeof img === "string") {
+      return { url, provider: url.includes("cloudinary.com") ? ("cloudinary" as const) : ("local" as const) };
+    }
+
+    const imageRecord = img as Record<string, unknown>;
+    const provider =
+      imageRecord.provider === "cloudinary" || imageRecord.provider === "local"
+        ? (imageRecord.provider as "cloudinary" | "local")
+        : url.includes("cloudinary.com")
+          ? ("cloudinary" as const)
+          : ("local" as const);
+
+    return {
+      url,
+      publicId:
+        typeof imageRecord.publicId === "string"
+          ? imageRecord.publicId
+          : typeof imageRecord.public_id === "string"
+            ? imageRecord.public_id
+            : typeof imageRecord.id === "string"
+              ? imageRecord.id
+              : undefined,
+      provider,
+    };
+  });
 
   return {
     ...product,

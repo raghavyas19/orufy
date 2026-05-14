@@ -6,6 +6,23 @@ import cloudinary from '../config/cloudinary.js'
 
 const pipeline = promisify(stream.pipeline)
 
+function normalizeImageRecord(image) {
+  if (!image) return null
+
+  if (typeof image === 'string') {
+    return { url: image, provider: 'local' }
+  }
+
+  const url = image.url || image.secure_url || image.imageUrl || image.src || image.path
+  if (!url) return null
+
+  return {
+    url,
+    publicId: image.publicId || image.public_id || image.id,
+    provider: image.provider || (url.includes('cloudinary.com') ? 'cloudinary' : 'local')
+  }
+}
+
 export async function uploadBuffer(buffer, originalName) {
   if (process.env.CLOUDINARY_URL || process.env.CLOUDINARY_CLOUD_NAME) {
     const result = await new Promise((resolve, reject) => {
@@ -41,4 +58,8 @@ export async function uploadBuffer(buffer, originalName) {
     publicId: safeName,
     provider: 'local'
   }
+}
+
+export function normalizeImagesPayload(images = []) {
+  return images.map(normalizeImageRecord).filter(Boolean)
 }
