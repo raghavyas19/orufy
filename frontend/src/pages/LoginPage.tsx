@@ -173,6 +173,7 @@ export default function LoginPage() {
                     <input
                       key={index}
                       type="text"
+                      inputMode="numeric"
                       maxLength={1}
                       value={value}
                       onChange={(event) => handleOtpChange(index, event.target.value)}

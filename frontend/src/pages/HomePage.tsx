@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
-import { Check, ChevronDown, Image as ImageIcon, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Image as ImageIcon, Plus, Trash2, X } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import type { HeaderContext } from "@/layouts/AppLayout";
 import { request, type ApiResponse, getApiBaseUrl } from "@/lib/api";
@@ -203,7 +203,7 @@ export default function HomePage() {
   const isEmpty = !loading && filteredProducts.length === 0;
 
   return (
-    <div className="px-8 py-4">
+    <div className="px-4 sm:px-8 py-4">
       {products.length > 0 && (
         <div className="flex items-center gap-8 border-b border-border mb-6">
           {(["published", "unpublished"] as const).map((value) => (
@@ -251,35 +251,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredProducts.map((product) => (
             <div key={product._id} className="bg-card rounded-xl border border-border p-3 shadow-sm">
-              <div className="h-44 rounded-lg bg-white flex items-center justify-center overflow-hidden px-6">
-                {product.images?.[0]?.url ? (
-                  <img
-                    src={product.images[0].url}
-                    alt={product.name}
-                    className="h-full w-full object-contain"
-                    onLoad={(e) => {
-                      const img = e.currentTarget as HTMLImageElement;
-                      if (img.naturalHeight > img.naturalWidth) {
-                        img.classList.remove("object-contain");
-                        img.classList.add("object-cover");
-                      } else {
-                        img.classList.remove("object-cover");
-                        img.classList.add("object-contain");
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="text-7xl">{product.emoji}</div>
-                )}
-              </div>
-              <div className="flex justify-center gap-1 my-2">
-                {Array.from({ length: Math.max(1, Math.min(product.images?.length || 0, 5)) }).map((_, index) => (
-                  <span
-                    key={index}
-                    className={`h-1.5 w-1.5 rounded-full ${index === 0 ? "bg-primary" : "bg-border"}`}
-                  />
-                ))}
-              </div>
+              <ProductImageGallery product={product} />
               <div className="px-1 pb-1">
                 <div className="font-semibold text-sm mb-2 flex items-start justify-between gap-3">
                   <span>{product.name}</span>
@@ -371,6 +343,79 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between py-1 text-xs">
       <span className="text-muted-foreground">{label} -</span>
       <span className="text-foreground font-medium">{value}</span>
+    </div>
+  );
+}
+
+function ProductImageGallery({ product }: { product: ProductCard }) {
+  const images = product.images ?? [];
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [fitMode, setFitMode] = useState<"contain" | "cover">("contain");
+
+  useEffect(() => {
+    setCurrentIndex(0);
+    setFitMode("contain");
+  }, [product._id, images.length]);
+
+  if (!images.length) {
+    return (
+      <div className="h-44 rounded-lg bg-white flex items-center justify-center overflow-hidden px-6">
+        <div className="text-7xl">{product.emoji}</div>
+      </div>
+    );
+  }
+
+  const currentImage = images[currentIndex] ?? images[0];
+
+  return (
+    <div className="space-y-2">
+      <div className="relative h-44 rounded-lg bg-white overflow-hidden px-6 flex items-center justify-center">
+        <img
+          key={currentImage.url}
+          src={currentImage.url}
+          alt={`${product.name} ${currentIndex + 1}`}
+          className={`h-full w-full ${fitMode === "cover" ? "object-cover" : "object-contain"}`}
+          onLoad={(event) => {
+            const img = event.currentTarget as HTMLImageElement;
+            setFitMode(img.naturalHeight > img.naturalWidth ? "cover" : "contain");
+          }}
+        />
+
+        {images.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setCurrentIndex((current) => (current - 1 + images.length) % images.length)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-white/90 border border-border shadow flex items-center justify-center text-foreground hover:bg-white"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentIndex((current) => (current + 1) % images.length)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-white/90 border border-border shadow flex items-center justify-center text-foreground hover:bg-white"
+              aria-label="Next image"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {images.length > 0 && (
+        <div className="flex items-center justify-center gap-1.5">
+          {images.map((image, index) => (
+            <button
+              type="button"
+              key={image.publicId || image.url || index}
+              onClick={() => setCurrentIndex(index)}
+              className={`h-1.5 rounded-full transition-all ${index === currentIndex ? "w-4 bg-primary" : "w-1.5 bg-border"}`}
+              aria-label={`Show image ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
