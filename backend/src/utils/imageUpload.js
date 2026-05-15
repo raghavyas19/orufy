@@ -1,10 +1,5 @@
-import fs from 'fs'
-import path from 'path'
 import stream from 'stream'
-import { promisify } from 'util'
-import cloudinary from '../config/cloudinary.js'
-
-const pipeline = promisify(stream.pipeline)
+import cloudinary, { isCloudinaryConfigured } from '../config/cloudinary.js'
 
 function normalizeImageRecord(image) {
   if (!image) return null
@@ -24,7 +19,7 @@ function normalizeImageRecord(image) {
 }
 
 export async function uploadBuffer(buffer, originalName) {
-  if (process.env.CLOUDINARY_URL || process.env.CLOUDINARY_CLOUD_NAME) {
+  if (isCloudinaryConfigured) {
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         { folder: process.env.CLOUDINARY_FOLDER || 'orufy' },
@@ -44,20 +39,7 @@ export async function uploadBuffer(buffer, originalName) {
     }
   }
 
-  const uploadDir = path.join(process.cwd(), 'uploads')
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true })
-  }
-
-  const safeName = `${Date.now()}-${originalName}`.replace(/\s+/g, '-')
-  const filePath = path.join(uploadDir, safeName)
-  await pipeline(stream.Readable.from([buffer]), fs.createWriteStream(filePath))
-
-  return {
-    url: `/uploads/${safeName}`,
-    publicId: safeName,
-    provider: 'local'
-  }
+  throw new Error('Cloudinary is not configured. Set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.')
 }
 
 export function normalizeImagesPayload(images = []) {

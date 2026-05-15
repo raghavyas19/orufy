@@ -523,6 +523,8 @@ function ProductModal({
   const [imageItems, setImageItems] = useState<ImagePreview[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modalPanelRef = useRef<HTMLDivElement>(null);
+  const [submitError, setSubmitError] = useState("");
   const productTypeRef = useRef<HTMLDivElement>(null);
   const exchangeRef = useRef<HTMLDivElement>(null);
 
@@ -558,6 +560,7 @@ function ProductModal({
 
       setForm(emptyForm);
       setImageItems([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
@@ -579,6 +582,13 @@ function ProductModal({
     );
     setShowNameError(false);
   }, [initialProduct]);
+
+  useEffect(() => {
+    // ensure modal panel is scrolled into view on mobile so bottom controls are reachable
+    setTimeout(() => {
+      modalPanelRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 50);
+  }, []);
 
   useEffect(() => {
     if (mode !== "add" || initialProduct) return;
@@ -645,6 +655,7 @@ function ProductModal({
 
     setShowNameError(false);
     setSubmitting(true);
+    setSubmitError("");
 
     try {
       const retainedImages = imageItems
@@ -654,14 +665,17 @@ function ProductModal({
 
       await onSubmit(form, files, retainedImages);
       if (mode === "add") clearDraft();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : String(err));
+      throw err;
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-700/45 z-40 flex items-start justify-center pt-16 px-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto border border-border">
+    <div className="fixed inset-0 bg-slate-700/45 z-40 flex items-start justify-center pt-16 px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
+      <div ref={modalPanelRef} className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-y-auto border border-border" style={{ maxHeight: 'calc(85vh - env(safe-area-inset-bottom, 0px))' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h3 className="font-semibold">{mode === "edit" ? "Edit Product" : "Add Product"}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -846,6 +860,7 @@ function ProductModal({
               {submitting ? "Saving..." : mode === "edit" ? "Update" : "Create"}
             </button>
           </div>
+          {submitError && <p className="px-5 text-xs text-destructive mt-2">{submitError}</p>}
         </form>
       </div>
     </div>

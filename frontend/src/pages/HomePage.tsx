@@ -137,7 +137,14 @@ function normalizeProduct(product: ProductRecord, index: number): ProductCard {
 export default function HomePage() {
   const { setHeaderSearchVisible, headerSearchValue } = useOutletContext<HeaderContext>();
   const [products, setProducts] = useState<ProductCard[]>([]);
-  const [tab, setTab] = useState<"published" | "unpublished">("published");
+  const [tab, setTab] = useState<"published" | "unpublished">(() => {
+    try {
+      const v = window.localStorage.getItem("orufy-home-tab");
+      return (v === "published" || v === "unpublished") ? (v as "published" | "unpublished") : "published";
+    } catch {
+      return "published";
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -152,6 +159,14 @@ export default function HomePage() {
       setHeaderSearchVisible(false);
     };
   }, [loading, products.length, setHeaderSearchVisible]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("orufy-home-tab", tab);
+    } catch {
+      // ignore
+    }
+  }, [tab]);
 
   useEffect(() => {
     void loadProducts();
