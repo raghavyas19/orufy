@@ -39,7 +39,7 @@ export default function AppLayout() {
       )}
 
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-[220px] -translate-x-full bg-sidebar text-sidebar-foreground flex flex-col transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-50 w-[220px] -translate-x-full bg-sidebar text-sidebar-foreground flex flex-col transition-transform duration-200 lg:translate-x-0 lg:fixed lg:top-0 lg:left-0 lg:h-full lg:translate-x-0">
         <div className="px-5 py-5">
           <Logo light />
         </div>
@@ -73,8 +73,10 @@ export default function AppLayout() {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="border-b border-border px-4 py-3 sm:px-6 sm:py-0 sm:h-14 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-[220px]">
+        <header
+          className="sticky top-0 z-40 border-b border-border px-4 py-3 sm:px-6 sm:py-0 sm:h-14 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-gradient-to-r from-[#FFECEF] via-[#FFF9E6] to-[#E8F6FF]"
+        >
           <div className="flex items-center justify-between gap-3 sm:justify-start">
             <div className="flex items-center gap-2 min-w-0 text-sm font-semibold text-foreground capitalize">
               <button
@@ -94,21 +96,25 @@ export default function AppLayout() {
                 pathname.replace("/", "")
               )}
             </div>
+          </div>
+          <div className="flex items-center ml-3">
+            {/* show header search to the right, before profile, except on Home page */}
+            {pathname !== "/" && headerSearchVisible && (
+              <div className="relative mr-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  placeholder="Search Services, Products"
+                  value={headerSearchValue}
+                  onChange={(event) => setHeaderSearchValue(event.target.value)}
+                  className="w-[220px] h-9 pl-9 pr-3 rounded-md bg-[#F3F4F6] text-xs placeholder:text-muted-foreground focus:outline-none"
+                />
+              </div>
+            )}
+
             <ProfileMenu userEmail={user?.email || "user@example.com"} />
           </div>
-          {headerSearchVisible && (
-            <div className="relative w-full sm:w-[280px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                placeholder="Search Services, Products"
-                value={headerSearchValue}
-                onChange={(event) => setHeaderSearchValue(event.target.value)}
-                className="w-full h-9 pl-9 pr-3 rounded-md bg-[#F3F4F6] text-xs placeholder:text-muted-foreground focus:outline-none"
-              />
-            </div>
-          )}
         </header>
-        <main className="flex-1 bg-background">
+        <main className="flex-1 bg-background pt-14">
           <Outlet context={{ setHeaderSearchVisible, headerSearchValue, setHeaderSearchValue }} />
         </main>
       </div>
